@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Testing
+.pytest_cache/
+
+# Virtual environments
+.venv/
+
+# IDE
+.idea/
+*.iml
+
+# Environment variables
+.env
+
+# Project specific
+proxies.txt
+
+# OS generated files
+.DS_Store
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+~$*
