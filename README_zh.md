@@ -12,9 +12,9 @@ DeepSearch 是一个由 LLM 驱动的网络搜索引擎，专注于深度网络�
 DeepSearch 采用模块化架构，以实现高效的网络搜索和 LLM 驱动的处理：
 
 - **前端**：使用 React 和 Vite 开发响应式用户界面，处理搜索输入、会话管理和结果显示。
-- **后端 (LLM Agent)**：基于 FastAPI 的 API 端点，集成 gemini-2.5-flash 模型和 langgraph 框架构建深度搜索工作流。
+- **后端 (LLM Agent)**：基于 FastAPI 的 API 端点，集成 gemini-2.5-flash 模型和 langgraph 框架构建深度搜索工作流。![workflow](https://github.com/HydeYYHH/DeepSearch/blob/master/assets/agent_workflow.svg)
 - **搜索引擎**：采用基于网络爬虫的高度可定制化搜索引擎，使用 semchunk 对网页进行切块, 使用 Sentence Transformers 进行本地嵌入或 gemini-embedding 进行在线嵌入，通过 HNSWlib 进行语义搜索, 由此减小搜索结果token
-量并优化搜索质量。
+量并优化搜索质量。![architecture](https://github.com/HydeYYHH/DeepSearch/blob/master/assets/web_architecture.svg)
 - **数据库**：通过 Peewee ORM 管理的 SQLite，用于存储会话和搜索历史。
 - **其他组件**：代理池用于网络抓取、速率限制器用于 API 调用。
 
