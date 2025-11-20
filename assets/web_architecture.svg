@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="600" viewBox="0 0 1200 600">
+  <defs>
+    <style>
+      .title{font:700 20px sans-serif;fill:#222}
+      .label{font:600 16px sans-serif;fill:#222}
+      .text{font:14px sans-serif;fill:#333}
+      .box{fill:#f9fbff;stroke:#6c8ebf;stroke-width:2}
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="10" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#555"/>
+    </marker>
+  </defs>
+  <text x="50" y="35" class="title">Web Architecture</text>
+
+  <rect x="100" y="120" width="240" height="110" rx="8" class="box"/>
+  <text x="120" y="150" class="label">Proxy Pool</text>
+  <text x="120" y="175" class="text">rotation and health</text>
+
+  <line x1="340" y1="175" x2="400" y2="175" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="400" y="120" width="240" height="110" rx="8" class="box"/>
+  <text x="420" y="150" class="label">Fetcher</text>
+  <text x="420" y="175" class="text">http client, retry</text>
+
+  <line x1="640" y1="175" x2="700" y2="175" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="700" y="120" width="240" height="110" rx="8" class="box"/>
+  <text x="720" y="150" class="label">Rate Limiter</text>
+  <text x="720" y="175" class="text">per host throttling</text>
+
+  <line x1="820" y1="230" x2="820" y2="300" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="700" y="300" width="240" height="110" rx="8" class="box"/>
+  <text x="720" y="330" class="label">Parser</text>
+  <text x="720" y="355" class="text">html to text</text>
+
+  <line x1="940" y1="355" x2="1000" y2="355" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="1000" y="300" width="240" height="110" rx="8" class="box"/>
+  <text x="1020" y="330" class="label">Embedding</text>
+  <text x="1020" y="355" class="text">local or online</text>
+
+  <line x1="1120" y1="410" x2="1120" y2="480" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="1000" y="480" width="240" height="110" rx="8" class="box"/>
+  <text x="1020" y="510" class="label">Vector Index</text>
+  <text x="1020" y="535" class="text">HNSWlib</text>
+</svg>
