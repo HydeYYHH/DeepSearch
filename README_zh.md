@@ -1,5 +1,6 @@
 # DeepSearch
-[English](https://github.com/HydeYYHH/DeepSearch/blob/main/README.md)     [中文](https://github.com/HydeYYHH/DeepSearch/blob/main/README_zh.md)
+[English](https://github.com/HydeYYHH/DeepSearch/blob/master/README.md)     [中文](https://github.com/HydeYYHH/DeepSearch/blob/master/README_zh.md)
+
 DeepSearch 是一个由 LLM 驱动的网络搜索引擎，专注于深度网络信息检索。
 
 ## 截图
