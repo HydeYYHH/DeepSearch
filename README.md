@@ -2,8 +2,9 @@
 DeepSearch is an LLM-powered web search engine focused on deep web information retrieval.
 
 ## Screenshot
-![example1](assets\weather_example.gif)
-![example2](assets\compare_example.gif)
+![example1](https://github.com/HydeYYHH/DeepSearch/blob/master/assets/weather_example.gif)
+![example2](https://github.com/HydeYYHH/DeepSearch/blob/master/assets/compare_example.gif)
+
 
 
 ## Installation
