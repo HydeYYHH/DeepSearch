@@ -61,8 +61,8 @@ function SearchPage({ setActive, search, setSearch, poll, setPoll, saveSessionLo
     const el = bottomInputRef.current
     const scroller = document.querySelector('.content')
     if (el && scroller) {
-      const top = 20
-      scroller.scrollTo({ top, behavior: 'smooth' })
+      const desired = Math.max(0, el.offsetTop - 180)
+      scroller.scrollTo({ top: desired, behavior: 'smooth' })
     }
   }, [messages, isLoading])
 

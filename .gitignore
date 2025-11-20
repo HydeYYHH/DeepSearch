@@ -12,3 +12,4 @@ package-lock.json
 *.db
 .vscode/
 .trae/
+.env

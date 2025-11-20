@@ -69,10 +69,16 @@ mdRenderer.use(mdKatex)
 
 export function renderMarkdown(md){
   let text = String(md || '')
-  let idx = 0
+  let counter = 0
+  const seen = new Map()
   text = text.replace(/\[cite:\s*([^\]]+)\]/g, (_, url) => {
-    idx++
     const href = String(url).trim()
+    let idx = seen.get(href)
+    if (!idx) {
+      counter += 1
+      idx = counter
+      seen.set(href, idx)
+    }
     return `[source${idx}](${href})`
   })
   let html = mdRenderer.render(text)

@@ -67,7 +67,9 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .qa-answer ul{margin:8px 0 8px 18px}
 .qa-answer li{margin:6px 0}
 .qa-answer img{display:block;width:100%;max-height:360px;object-fit:cover;border-radius:12px;background:linear-gradient(90deg,#1a1d24 0%,#242833 50%,#1a1d24 100%)}
- .qa-answer .cite{display:inline-block;margin-left:6px;padding:2px 6px;border-radius:6px;border:1px solid #2a2f39;background:#0c0e12;color:var(--accent);text-decoration:none}
+ .qa-answer .cite{display:inline-flex;align-items:center;margin-left:6px;padding:2px 8px;border-radius:8px;border:1px solid rgba(32,198,255,0.36);background:rgba(32,198,255,0.12);color:#8bdcff;text-decoration:none;font-weight:600;transition:background-color 160ms ease,color 160ms ease,border-color 160ms ease}
+ .qa-answer .cite:hover{background:rgba(32,198,255,0.18);color:#aee9ff;border-color:rgba(32,198,255,0.5)}
+ .qa-answer .cite:active{transform:translateY(1px)}
 @media (max-width:980px){
   .qa-title{font-size:20px}
   .qa-answer{font-size:15px}

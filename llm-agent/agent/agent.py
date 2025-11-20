@@ -1,6 +1,7 @@
 import operator
 from datetime import datetime
 from typing import Annotated, Literal, Any, Optional
+import os
 
 from dotenv import load_dotenv
 from langchain.messages import SystemMessage, HumanMessage
@@ -170,8 +171,12 @@ builder.add_conditional_edges("search_call", should_continue, {
     "summarize": "summarize",
 })
 builder.add_edge("tool_node", "search_call")
-builder.add_edge("summarize", "safety_check")
-builder.add_edge("safety_check", "update_history")
+_safety_enabled = str(os.environ.get("ENABLE_SAFETY_CHECK", "true")).lower() == "true"
+if _safety_enabled:
+    builder.add_edge("summarize", "safety_check")
+    builder.add_edge("safety_check", "update_history")
+else:
+    builder.add_edge("summarize", "update_history")
 builder.add_edge("update_history", END)
 
 agent = builder.compile()
