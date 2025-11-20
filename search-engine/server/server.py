@@ -1,3 +1,4 @@
+from dotenv import load_dotenv
 from zero import ZeroServer
 from msgspec import Struct
 
@@ -51,4 +52,5 @@ async def list_available_engines() -> dict[str, str]:
 
 
 if __name__ == '__main__':
-    app.run()
+    load_dotenv()
+    app.run(workers=4)

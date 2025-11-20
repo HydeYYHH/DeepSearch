@@ -1,21 +1,18 @@
 import inspect
 import logging
-import os
 from dataclasses import dataclass
 from typing import Optional, Iterator, Callable
 from urllib.parse import urlencode
 
+from lxml.html import HtmlElement
+
 from lib.search.limiter import StandardRateLimitStrategy
-from lib.search.request import Response, RequestClient
-from dotenv import load_dotenv
+from lib.search.request import Response, RequestClient, RequestClient2
 from lxml import html
 from trafilatura import extract
 
 from lib.search.proxy import ProxyForbiddenException
 from lib.search.utils import clean_text
-
-load_dotenv(dotenv_path=os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), '.env'))
 
 
 @dataclass
@@ -28,7 +25,7 @@ class Selector(object):
     - text_content: whether to extract all text (including child elements) in the element
     - postprocess: function to postprocess the value after extraction
     """
-    selector: str
+    selector: Optional[str] = None
     attribute: Optional[str] = None
     text: Optional[bool] = None
     tail: Optional[bool] = None
@@ -39,11 +36,11 @@ class Selector(object):
 
 class Schema(object):
     """
-    Content Schema And Model
-    - content: optional, markdown content of the page
     - container: css selector to select the container of the search result
+    - preprocess: function to preprocess the element before extraction
     """
     container: str = "html"
+    preprocess: Optional[Callable[[HtmlElement], HtmlElement]] = None
 
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
@@ -65,51 +62,60 @@ class Result(object):
 class Parser(object):
     def __init__(self, doc: str, schema: Schema.__class__ = Schema):
         self.doc = doc
-        self.tree = html.fromstring(doc)
         self.schema = schema
+        self.selectors = {
+            name: value for name, value in inspect.getmembers(self.schema)
+            if isinstance(value, Selector)
+        }
+        self.tree = html.fromstring(doc)
 
     def title(self) -> str:
         titles = self.tree.cssselect("title")
         return titles[0].text_content() if titles else ""
 
     def parse(self) -> list[Schema]:
-        selectors = {
-            name: value for name, value in inspect.getmembers(self.schema)
-            if isinstance(value, Selector)
-        }
-        if not selectors:
-            content = extract(self.doc, output_format="markdown", deduplicate=True, with_metadata=True,
-                              include_images=True, include_links=True)
+        if not self.selectors:
+            content = extract(
+                self.doc,
+                output_format="markdown",
+                with_metadata=True,
+                include_links=True,
+                include_images=False,
+            )
             return [self.schema(content=content)]
-        res = []
+        results = []
         elements = self.tree.cssselect(self.schema.container)
         for element in elements:
-            model = None
-            for k, v in selectors.items():
-                if not isinstance(v, Selector):
+            if self.schema.preprocess:
+                element = self.schema.preprocess(element)
+                if not element:
                     continue
-                outer = element.cssselect(v.selector)
+            model = self.schema()
+            for key, selector in self.selectors.items():
+                if not isinstance(selector, Selector):
+                    continue
+                outer = (
+                    element.cssselect(selector.selector)
+                    if selector.selector
+                    else [element]
+                )
                 if not outer:
+                    setattr(model, key, None)
                     continue
-                if model is None:
-                    model = self.schema()
                 value = None
-                if v.text_content:
+                if selector.text_content:
                     value = clean_text(outer[0].text_content())
-                elif v.text:
+                elif selector.text:
                     value = clean_text(outer[0].text)
-                elif v.tail:
+                elif selector.tail:
                     value = clean_text(outer[0].tail)
-                elif v.attribute:
-                    value = outer[0].get(v.attribute)
-                if callable(v.postprocess) and value is not None:
-                    value = v.postprocess(value)
-
-                setattr(model, k, value)
-            if model is not None:
-                res.append(model)
-        return res
-
+                elif selector.attribute:
+                    value = outer[0].get(selector.attribute)
+                if callable(selector.postprocess) and value is not None:
+                    value = selector.postprocess(value)
+                setattr(model, key, value)
+            results.append(model)
+        return results
 
 class Engine(object):
     NAME = "base"
@@ -147,7 +153,7 @@ class Engine(object):
     def _detect_sorry(cls, result: Response) -> bool:
         return False
 
-    def __init__(self, parser: Parser.__class__ = Parser, client: RequestClient.__class__ = RequestClient):
+    def __init__(self, parser: Parser.__class__ = Parser, client: RequestClient.__class__ = RequestClient2):
         self.client = client()
         self.parser = parser
         self.logger = logging.getLogger('BaseSearchEngine')
@@ -170,7 +176,7 @@ class Engine(object):
             _resp = await self.client.get(url, **kwargs)
             _resp.raise_for_status()
             self.logger.info(f"Successfully get response from {url}?{urlencode(kwargs.get('params', {}))}")
-            parser = self.parser(_resp.text)
+            parser = self.parser(_resp.html)
             res = Result(title=parser.title(), content=parser.parse())
             if self.__class__._detect_sorry(_resp):
                 self.logger.error(f"Sorry, some verification is required for {_resp.url}")

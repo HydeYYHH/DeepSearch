@@ -5,11 +5,11 @@ from lib.search.engines.base import Schema, Selector, Parser, Engine
 
 
 class So360Schema(Schema):
-    container: str = "li.res-list"
-    url: str = Selector(selector=".res-title a", attribute="data-mdurl")
-    title: str = Selector(selector=".res-title a", text_content=True)
-    abstract: str = Selector(selector="p.res-desc", text_content=True)
-    source: str = Selector(selector="cite", text_content=True)
+    container = "li.res-list"
+    url = Selector(selector=".res-title a", attribute="data-mdurl")
+    title = Selector(selector=".res-title a", text_content=True)
+    abstract = Selector(selector="p.res-desc", text_content=True)
+    source = Selector(selector="cite", text_content=True)
 
 
 class So360Parser(Parser):

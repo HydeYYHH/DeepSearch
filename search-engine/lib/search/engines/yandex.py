@@ -43,7 +43,7 @@ class YandexEngine(Engine):
 
     @classmethod
     def _detect_sorry(cls, result: Response) -> bool:
-        return "Are you not a robot?" in result.text
+        return "Are you not a robot?" in result.html
 
     def __init__(self):
         super().__init__(parser=YandexParser)

@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from rpc_client import RpcClient, zero_client, SearchConfig, Result
+from agent.rpc_client import RpcClient, zero_client, SearchConfig, Result
 
 
 class list_available_engines(BaseModel):
@@ -15,7 +15,10 @@ class fetch_content(BaseModel):
 
 
 class search(BaseModel):
-    """Search the web with the given query using specific search engines and preferences."""
+    """
+    Search the web with the given query using specific search engines and preferences.
+    Search operators like `site:`, `"..."`, `-`, `OR` supported but not guaranteed to work.
+    """
     query: str = Field(..., description="Search query text")
     engine: str = Field(default="default", description="Search engine name to use, default is 'default' engine")
     preference: Literal["balance", "latest", "more_results"] = Field(

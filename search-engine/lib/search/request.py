@@ -1,9 +1,11 @@
 import logging
 import random
+import re
 from dataclasses import dataclass
 from typing import Optional
 from urllib.parse import urlencode
 
+from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, CacheMode, BrowserConfig
 from curl_cffi import AsyncSession
 from curl_cffi.requests.impersonate import DEFAULT_CHROME
 
@@ -12,12 +14,8 @@ from curl_cffi.requests.impersonate import DEFAULT_CHROME
 class Response:
     url: str
     status_code: int
-    content: bytes
-    encoding: Optional[str] = 'utf-8'
-
-    @property
-    def text(self) -> str:
-        return self.content.decode(self.encoding, errors='ignore')
+    html: str
+    markdown: Optional[str] = None
 
     def raise_for_status(self):
         status_code = int(self.status_code)
@@ -53,11 +51,54 @@ class RequestClient(object):
             wrapped = Response(
                 url=str(resp.url),
                 status_code=int(resp.status_code),
-                content=resp.content,
-                encoding=getattr(resp, 'encoding', 'utf-8')
+                html=resp.content.decode(getattr(resp, 'encoding', 'utf-8'), errors='ignore'),
             )
             wrapped.raise_for_status()
             return wrapped
+
+
+class RequestClient2(RequestClient):
+    """
+    crawl4ai based request client
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.logger = logging.getLogger(__name__)
+
+    async def get(self, url: str, **kwargs):
+        headers = {**DEFAULT_HEADERS, **kwargs.get('headers', {})}
+        if 'User-Agent' not in headers:
+            headers['User-Agent'] = random.choice(USER_AGENTS)
+        kwargs['headers'] = headers
+
+        async with AsyncWebCrawler(
+                config=BrowserConfig(headers=headers,
+                                     cookies=[kwargs.get('cookies')] if kwargs.get('cookies') else [])) as crawler:
+            scripts = []
+            config = CrawlerRunConfig(
+                cache_mode=CacheMode.ENABLED,
+                js_code=scripts,
+                exclude_external_links=True,
+                exclude_social_media_links=True,
+                exclude_all_images=True,
+                remove_overlay_elements=True,
+                magic=True,
+                simulate_user=True,
+                override_navigator=True
+            )
+            resp = await crawler.arun(
+                url=url if not kwargs.get("params") else f"{url}?{urlencode(kwargs.get('params', {}))}",
+                config=config,
+            )
+        wrapped = Response(
+            url=resp.url,
+            status_code=200 if resp.success else 400,
+            html=resp.html,
+            markdown=resp.markdown.raw_markdown if resp.markdown else None
+        )
+        wrapped.raise_for_status()
+        return wrapped
 
 
 USER_AGENTS = [

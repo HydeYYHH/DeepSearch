@@ -6,17 +6,12 @@ from curl_cffi import Response
 
 from lib.search.engines.base import Engine, Parser, Schema, Selector
 
-
-# Due to Baidu's anti-scraping policies,
-# avoid making consecutive requests or fetching multiple pages in quick succession.
-
-
 class BaiduSchema(Schema):
-    container: str = "div.result"
-    url: str = Selector(selector="a", attribute="href")
-    title: str = Selector(selector="a", text_content=True)
-    abstract: str = Selector(selector='[data-module="abstract"]', text_content=True)
-    source: str = Selector(selector="span.cosc-source-text", text_content=True)
+    container = "div.result"
+    url = Selector(selector=None, attribute="mu")
+    title = Selector(selector="a", text_content=True)
+    abstract = Selector(selector='[data-module="abstract"]', text_content=True)
+    source = Selector(selector="span.cosc-source-text", text_content=True)
 
 
 class BaiduParser(Parser):

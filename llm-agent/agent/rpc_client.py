@@ -3,6 +3,7 @@
 from msgspec import Struct
 
 from zero import ZeroClient
+import asyncio
 
 zero_client = ZeroClient("localhost", 5559, default_timeout=600_000)
 
@@ -24,13 +25,13 @@ class RpcClient:
         self._zero_client = _zero_client
 
     async def echo(self, msg: str) -> str:
-        return self._zero_client.call("echo", msg)
+        return await asyncio.to_thread(self._zero_client.call, "echo", msg)
 
     async def fetch(self, url: str) -> Result:
-        return self._zero_client.call("fetch", url)
+        return await asyncio.to_thread(self._zero_client.call, "fetch", url)
 
     async def search(self, config: SearchConfig) -> Result:
-        return self._zero_client.call("search", config)
+        return await asyncio.to_thread(self._zero_client.call, "search", config)
 
     async def list_available_engines(self) -> dict[str, str]:
-        return self._zero_client.call("list_available_engines", None)
+        return await asyncio.to_thread(self._zero_client.call, "list_available_engines", None)

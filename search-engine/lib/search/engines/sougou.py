@@ -6,8 +6,8 @@ from lib.search.engines.base import Schema, Parser, Engine, Selector
 
 class SougouSchema(Schema):
     container = ".vrwrap"
-    url = Selector(selector="a", attribute="href")
-    title = Selector(selector="a", text_content=True)
+    url = Selector(selector=".r-sech[data-url]", attribute="data-url")
+    title = Selector(selector=".vr-title a", text_content=True)
     abstract = Selector(selector=".text-layout.space-txt", text_content=True)
     source = Selector(selector=".text-layout.citeurl", text_content=True)
 

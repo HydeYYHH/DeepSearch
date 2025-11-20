@@ -1,10 +1,7 @@
-import os
 import logging
 from typing import Sequence
 
 from limits import storage, strategies, RateLimitItemPerSecond
-
-ENABLE_RANDOM_DELAY = os.getenv("ENABLE_RANDOM_DELAY", "True").lower() == "true"
 
 
 class RateLimitStrategy:

@@ -1,17 +1,19 @@
 import asyncio
 import logging
 import math
-import re
 from functools import lru_cache
+from itertools import chain
 from urllib.parse import urlparse
+from google.genai import types
 
 import hnswlib
 import numpy as np
 from curl_cffi import ProxySpec
+from google import genai
 from tenacity import retry, stop_after_attempt, wait_exponential
 from tldextract import tldextract
 
-from lib.search.engines.base import Engine, Result
+from lib.search.engines.base import Engine, Result, Schema
 from dataclasses import dataclass
 
 from lib.search.limiter import RateLimiter
@@ -32,24 +34,66 @@ class EngineConfig(object):
     weight: int = 1
 
 
+class EmbeddingModel(object):
+    def __init__(self, online: bool = True):
+        self.online = online
+        if online:
+            self.client = genai.Client()
+            self.model = self.client.models
+        else:
+            from sentence_transformers import SentenceTransformer
+            self.model = SentenceTransformer("google/embeddinggemma-300m")
+
+    def encode_documents(self, text: list[str]):
+        if self.online:
+            _all = []
+            BATCH = 100
+            for i in range(0, len(text), BATCH):
+                batch = text[i:i+BATCH]
+                embs = self.model.embed_content(
+                    model="gemini-embedding-001", contents=batch,
+                    config=types.EmbedContentConfig(task_type="RETRIEVAL_DOCUMENT")
+                ).embeddings
+                _all.extend([e.values for e in embs])
+            arr = np.asarray(_all, dtype=np.float32)
+            return arr
+        else:
+            arr = self.model.encode(
+                text, normalize_embeddings=True, convert_to_numpy=True,
+                batch_size=128, prompt_name="document"
+            )
+            return arr.astype(np.float32)
+
+    def encode_query(self, text: str):
+        if self.online:
+            emb = self.model.embed_content(
+                model="gemini-embedding-001", contents=text,
+                config=types.EmbedContentConfig(task_type="query")
+            ).embeddings[0].values
+            return np.asarray(emb, dtype=np.float32)
+        else:
+            arr = self.model.encode(
+                [text], normalize_embeddings=True, convert_to_numpy=True,
+                batch_size=128, prompt_name="query"
+            )[0]
+            return arr.astype(np.float32)
+
+
 class Searcher(object):
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         self.proxies = ProxyPool()
         self.limiter = RateLimiter()
+        online = os.getenv('USE_ONLINE_EMBEDDING', 'false').lower() == 'true'
+        self._emb_model = EmbeddingModel(online=online)
 
     @staticmethod
     @lru_cache(maxsize=1)
-    def _emb_model():
-        from sentence_transformers import SentenceTransformer
-        return SentenceTransformer("moka-ai/m3e-small")
+    def _chunker():
+        from semchunk import chunkerify
+        return chunkerify('google-bert/bert-base-multilingual-uncased', 512)
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=2, max=10))
-    async def search(self, query: str) -> Result:
-        """Local knowledge search"""
-        pass
-
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=2, max=10))
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=5, max=30))
     @auto_aclose
     async def search(self, target: str, engine: Engine, **kwargs) -> Result:
         with self.proxies.get() as proxy:
@@ -72,75 +116,39 @@ class Searcher(object):
             for i, cfg in enumerate(engines)
         ]
         results = await asyncio.gather(*tasks)
-        # Extract contents
-        contents = []
-        texts = []
-        pattern = re.compile(
-            r"title|description|abstract|summary|content|snippet",
-            re.I)
-        for res in results:
-            if not res:
-                continue
-            for item in res.content:
-                contents.append(item)
-                texts.append(f"passage: {"\n".join(
-                    str(v) for k, v in vars(item).items() if v and pattern.search(k)
-                )}")
-        if not texts:
-            return Result(title=query, content=[])
-        # Embed contents
-        embeddings = self._emb_model().encode(texts, normalize_embeddings=True, convert_to_numpy=True)
-        query_embedding = self._emb_model().encode([query], normalize_embeddings=True, convert_to_numpy=True)[0]
-        query_similarities = np.dot(embeddings, query_embedding)
-
-        # Build index
-        dim = embeddings.shape[1]
-        index = hnswlib.Index(space='ip', dim=dim)
-        index.init_index(max_elements=len(embeddings), ef_construction=kwargs.pop("ef", 200), M=kwargs.pop("m", 16))
-        index.add_items(embeddings, np.arange(len(embeddings)))
-        index.set_ef(kwargs.pop("ef", 100))
         # Dedup
-        threshold = kwargs.pop("threshold", 0.9)
-        sorted_indices = np.argsort(-query_similarities)
-        groups = {}
-        group_id = 0
-        for idx in sorted_indices:
-            assigned = False
-            for gid, group_items in groups.items():
-                max_similarity = max(np.dot(embeddings[idx], embeddings[item]) for item in group_items)
-                if max_similarity > threshold:
-                    groups[gid].append(idx)
-                    assigned = True
-                    break
-
-            if not assigned:
-                groups[group_id] = [idx]
-                group_id += 1
-        keep = []
-        for group_items in groups.values():
-            group_items.sort(key=lambda x: -query_similarities[x])
-            keep.append(group_items[0])
-        keep.sort(key=lambda x: -query_similarities[x])
-        if len(keep) < num:
-            candidate_scores = {}
-            for gid, group_items in groups.items():
-                if len(group_items) <= 1:
-                    continue
-                for candidate in group_items[1:]:
-                    min_similarity = min(np.dot(embeddings[candidate], embeddings[k]) for k in keep)
-                    score = (1 - min_similarity) * query_similarities[candidate]
-                    candidate_scores[candidate] = score
-            sorted_candidates = sorted(candidate_scores.keys(), key=lambda x: -candidate_scores[x])
-            needed = num - len(keep)
-            for i in range(min(needed, len(sorted_candidates))):
-                if sorted_candidates[i] not in keep:
-                    keep.append(sorted_candidates[i])
-        if len(keep) < num:
-            all_indices = set(range(len(contents)))
-            remaining = list(all_indices - set(keep))
-            remaining.sort(key=lambda x: -query_similarities[x])
-            needed = num - len(keep)
-            for i in range(min(needed, len(remaining))):
-                keep.append(remaining[i])
-        keep.sort(key=lambda x: -query_similarities[x])
-        return Result(title=query, content=[contents[i] for i in keep[:num]])
+        contents = {}
+        for res in results or []:
+            for item in (res.content if res else []):
+                if hasattr(item, "url"):
+                    contents[item.url] = item
+        if not contents:
+            return Result(title=query, content=[])
+        contents = list(contents.values())
+        # Preview
+        tasks = [
+            self.search(content.url, Engine(), **kwargs)
+            for content in contents
+        ]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        results = [res for res in results if not isinstance(res, Exception)]
+        # Chunking
+        chunks, offsets = self._chunker().__call__([f"{res.title}\n{res.content[0].content}" for res in results],
+                                                   offsets=True, overlap=0.2)
+        chunks = list(chain.from_iterable(chunks))
+        doc_offsets = []
+        for doc_idx, doc_chunks in enumerate(offsets):
+            doc_offsets.extend([doc_idx] * len(doc_chunks))
+        # Initialize index
+        embeddings = self._emb_model.encode_documents(chunks)
+        dim = embeddings.shape[1]
+        index = hnswlib.Index(space='cosine', dim=dim)
+        index.init_index(max_elements=len(embeddings), ef_construction=200, M=16)
+        index.add_items(embeddings, np.arange(len(embeddings)))
+        index.set_ef(100)
+        # Query
+        query_embedding = self._emb_model.encode_query(query).reshape(1, -1)
+        labels, _ = index.knn_query(query_embedding, k=min(num, len(chunks)))
+        labels = labels[0].astype(int)
+        return Result(title=query,
+                      content=[Schema(content=chunks[i], url=contents[doc_offsets[i]].url) for i in labels])

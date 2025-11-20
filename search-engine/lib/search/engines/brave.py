@@ -3,14 +3,12 @@ from typing import Iterator
 
 from lib.search.engines.base import Schema, Selector, Parser, Engine
 
-# Rate limited by Brave Search
-
 class BraveSchema(Schema):
-    container: str = "div.snippet"
-    url: str = Selector(selector="a", attribute="href")
-    title: str = Selector(selector="div.title", text_content=True)
-    abstract: str = Selector(selector="div.snippet-description", text_content=True)
-    source: str = Selector(selector="div.sitename", text_content=True)
+    container = "div.snippet"
+    url = Selector(selector="a", attribute="href")
+    title = Selector(selector="div.title", text_content=True)
+    abstract = Selector(selector="div.snippet-description", text_content=True)
+    source = Selector(selector="div.sitename", text_content=True)
 
 
 class BraveParser(Parser):
