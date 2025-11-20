@@ -50,7 +50,7 @@ Evaluate all retrieved information using the **Three Validation Factors**:
 - "Tokyo weather forecast `current date` site:jma.go.jp"
 - "Tokyo real-time weather update `current date` latest"
 - "Tokyo short-term weather forecast next 24 hours site:weather.com"
-- "Tokyo weather `current date` latest"
+- "東京 天気 `current date` 最新"
 ## Reasoning
 - Check if each result contains a timestamp matching the user's date window.
 - Compare values (temperature, precipitation probability, wind) across official sources.

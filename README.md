@@ -1,10 +1,10 @@
 # DeepSearch
+[English](https://github.com/HydeYYHH/DeepSearch/blob/main/README.md)     [中文](https://github.com/HydeYYHH/DeepSearch/blob/main/README_zh.md)
 DeepSearch is an LLM-powered web search engine focused on deep web information retrieval.
 
 ## Screenshot
 ![example1](https://github.com/HydeYYHH/DeepSearch/blob/master/assets/weather_example.gif)
 ![example2](https://github.com/HydeYYHH/DeepSearch/blob/master/assets/compare_example.gif)
-
 
 
 ## Installation
