@@ -17,4 +17,4 @@ COPY llm-agent /app/llm-agent
 COPY --from=frontend-build /app/frontend/dist /app/llm-agent/static
 ENV PORT=8000
 EXPOSE 8000 5559
-CMD ["sh","-c","python search-engine/server/server.py & python llm-agent/main.py"]
+CMD ["sh","-c","PYTHONPATH=/app/search-engine python search-engine/server/server.py & python llm-agent/main.py"]

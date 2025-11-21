@@ -45,10 +45,12 @@ class Safety(BaseModel):
 
 
 load_dotenv()
+_google_api_key = os.environ.get("GOOGLE_API_KEY") or "dummy"
 llm = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash",
     temperature=0,
     max_retries=3,
+    google_api_key=_google_api_key,
 )
 llm_with_tools = llm.bind_tools(
     [StructuredTool(name=tool.__name__, description=tool.__doc__, args_schema=tool) for tool in tools_signatures]
@@ -171,7 +173,7 @@ builder.add_conditional_edges("search_call", should_continue, {
     "summarize": "summarize",
 })
 builder.add_edge("tool_node", "search_call")
-_safety_enabled = str(os.environ.get("ENABLE_SAFETY_CHECK", "true")).lower() == "true"
+_safety_enabled = str(os.environ.get("SAFETY_CHECK", os.environ.get("ENABLE_SAFETY_CHECK", "true"))).lower() == "true"
 if _safety_enabled:
     builder.add_edge("summarize", "safety_check")
     builder.add_edge("safety_check", "update_history")
