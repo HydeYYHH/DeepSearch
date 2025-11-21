@@ -27,7 +27,8 @@ app.add_middleware(
 )
 
 _static_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "static"))
-app.mount("/", StaticFiles(directory=_static_dir, html=True), name="static")
+if os.path.isdir(_static_dir):
+    app.mount("/", StaticFiles(directory=_static_dir, html=True), name="static")
 
 @app.get("/")
 async def root():
