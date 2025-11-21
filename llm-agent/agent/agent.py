@@ -46,8 +46,8 @@ class Safety(BaseModel):
 
 load_dotenv()
 llm = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash",
-    temperature=0,
+    model="gemini-2.5-pro",
+    temperature=0.4,
     max_retries=3,
 )
 llm_with_tools = llm.bind_tools(
@@ -116,7 +116,7 @@ async def summarize(state: AgentState) -> dict[str, Any]:
     # Include history in the summarize prompt if available
     history_content = ""
     if state.history:
-        history_content = "\n### Previous Interactions:\n" + "\n".join(
+        history_content = "\n### Conversation History:\n" + "\n".join(
             [f"User: {q}\nAI: {a}" for q, a in state.history]
         )
     prompt = [

@@ -103,25 +103,17 @@ export function renderMarkdown(md){
     href = href.replace(/>$/, '')
     return href
   }
-  text = text.replace(/\[cite:\s*([^\]]+)\]/gi, (_, url) => {
-    const href = clean(url)
-    let idx = seen.get(href)
-    if (!idx) {
-      counter += 1
-      idx = counter
-      seen.set(href, idx)
-    }
-    return `[source${idx}](${href})`
-  })
-  text = text.replace(/\bcite:\s*([^\s]+)/gi, (_, url) => {
-    const href = clean(url)
-    let idx = seen.get(href)
-    if (!idx) {
-      counter += 1
-      idx = counter
-      seen.set(href, idx)
-    }
-    return `[source${idx}](${href})`
+  text = text.replace(/\[cite:\s*([^\]]+)\]/gi, (_, list) => {
+    const urls = String(list)
+      .split(/\s*,\s*/)
+      .map(clean)
+      .filter(Boolean)
+    const parts = urls.map((href) => {
+      let idx = seen.get(href)
+      if (!idx) { counter += 1; idx = counter; seen.set(href, idx) }
+      return `[source${idx}](${href})`
+    })
+    return parts.join(' ')
   })
   let html = mdRenderer.render(text)
   html = html.replace(/<a[^>]*href=\"([^\"]+)\"[^>]*>source(\d+)<\/a>/g, (_, href, n) => {
