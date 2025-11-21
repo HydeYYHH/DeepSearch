@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from fastapi import FastAPI, HTTPException, Form, Request
+from fastapi.staticfiles import StaticFiles
 import asyncio
 import uuid
 from fastapi.responses import JSONResponse
@@ -24,6 +25,8 @@ app.add_middleware(
     allow_headers=["*"],
     allow_credentials=True,
 )
+
+app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 @app.get("/")
 async def root():
@@ -68,7 +71,6 @@ async def get_task(task_id: str):
         raise HTTPException(status_code=404, detail="Task not found")
     data = {"task_id": task_id, "status": info.get("status")}
     if info.get("result"):
-        print(info)
         data.update({
             "history_id": info["result"].get("history_id"),
             "answer": info["result"].get("answer")

@@ -19,6 +19,7 @@ DeepSearch 采用模块化架构，以实现高效的网络搜索和 LLM 驱动�
 - **其他组件**：代理池用于网络抓取、速率限制器用于 API 调用。
 
 ## 安装
+### 手动安装
 1. 克隆仓库：
     ```bash
     git clone https://github.com/HydeYYHH/DeepSearch
@@ -43,7 +44,7 @@ DeepSearch 采用模块化架构，以实现高效的网络搜索和 LLM 驱动�
     cd frontend
     npm install
     ```
-5. 导出环境变量
+5. 导入环境变量
     ```bash
     export GOOGLE_API_KEY=Your Google API Key
     export HUGGING_FACE_HUB_TOKEN=Your Hugging Face Hub Token
@@ -63,4 +64,8 @@ DeepSearch 采用模块化架构，以实现高效的网络搜索和 LLM 驱动�
     ```bash
     cd frontend
     npm run dev
+    ```
+### Docker部署
+    ```bash
+    docker compose up
     ```

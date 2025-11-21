@@ -1,0 +1,16 @@
+services:
+  deepsearch:
+    build: .
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN}
+      - USE_ONLINE_EMBEDDING=${USE_ONLINE_EMBEDDING}
+      - SAFETY_CHECK=${SAFETY_CHECK}
+      - PORT=8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - llm_db:/app/llm-agent/assets
+    restart: unless-stopped
+volumes:
+  llm_db:

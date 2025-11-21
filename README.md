@@ -9,6 +9,7 @@ DeepSearch is an LLM-powered web search engine focused on deep web information r
 
 
 ## Installation
+### Manual Installation
 1. Clone the repository:
     ```bash
     git clone https://github.com/HydeYYHH/DeepSearch
@@ -53,4 +54,8 @@ DeepSearch is an LLM-powered web search engine focused on deep web information r
     ```bash
     cd frontend
     npm run dev
+    ```
+### Docker Deployment
+    ```bash
+    docker compose up
     ```
