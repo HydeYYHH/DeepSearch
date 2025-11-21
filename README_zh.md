@@ -66,6 +66,6 @@ DeepSearch 采用模块化架构，以实现高效的网络搜索和 LLM 驱动�
     npm run dev
     ```
 ### Docker部署
-    ```bash
-    docker compose up
-    ```
+```bash
+docker compose up
+```

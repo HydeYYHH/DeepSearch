@@ -56,6 +56,6 @@ DeepSearch is an LLM-powered web search engine focused on deep web information r
     npm run dev
     ```
 ### Docker Deployment
-    ```bash
-    docker compose up
-    ```
+```bash
+docker compose up
+```
