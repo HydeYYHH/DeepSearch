@@ -43,7 +43,8 @@ class EmbeddingModel(object):
             self.model = self.client.models
         else:
             from sentence_transformers import SentenceTransformer
-            self.model = SentenceTransformer("google/embeddinggemma-300m")
+            # self.model = SentenceTransformer("google/embeddinggemma-300m")
+            self.model = SentenceTransformer("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
 
     def encode_documents(self, text: list[str]):
         if self.online:
@@ -61,7 +62,8 @@ class EmbeddingModel(object):
         else:
             arr = self.model.encode(
                 text, normalize_embeddings=True, convert_to_numpy=True,
-                batch_size=128, prompt_name="document"
+                batch_size=128
+                # prompt_name="document"
             )
             return arr.astype(np.float32)
 
@@ -75,7 +77,8 @@ class EmbeddingModel(object):
         else:
             arr = self.model.encode(
                 [text], normalize_embeddings=True, convert_to_numpy=True,
-                batch_size=128, prompt_name="query"
+                batch_size=128, 
+                # prompt_name="query"
             )[0]
             return arr.astype(np.float32)
 
@@ -107,7 +110,15 @@ class Searcher(object):
                     http=f"http://{proxy}",
                     https=f"https://{proxy}",
                 )})
-            return await engine.search(target, **kwargs)
+            alt = kwargs.pop("alt", None)
+            try:
+                return await engine.search(target, **kwargs)
+            except Exception as e:
+                self.logger.error(f"Error searching {target} with {engine.__class__.__name__}: {e}")
+                if alt:
+                    return Result(title=query, content=[alt])
+                else:
+                    raise e
 
     async def aggregate_search(self, query: str, engines: list[EngineConfig], num: int = 10, **kwargs) -> Result:
         total = sum(engine.weight for engine in engines)
@@ -128,7 +139,7 @@ class Searcher(object):
         contents = list(contents.values())
         # Preview
         tasks = [
-            self.search(content.url, Engine(), **kwargs)
+            self.search(content.url, Engine(), alt=content.abstract, **kwargs)
             for content in contents
         ]
         results = await asyncio.gather(*tasks, return_exceptions=True)

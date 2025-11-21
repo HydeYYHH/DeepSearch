@@ -94,6 +94,7 @@ mdRenderer.renderer.rules.link_open = function(tokens, idx, options, env, self) 
 
 export function renderMarkdown(md){
   let text = String(md || '')
+  text = text.replace(/<br\s*\/?>(\r?\n)?/gi, '\n')
   let counter = 0
   const seen = new Map()
   const clean = (s) => {

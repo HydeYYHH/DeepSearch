@@ -78,7 +78,7 @@ Your job is to read ALL provided information — including:
 ## 2. GENERAL OUTPUT FORMAT
 ============================================================
 Your final answer must follow this exact structure:
-### **Executive Summary**
+### Executive Summary
 A short paragraph (3-5 sentences) summarizing the central insights.
 ### Key Sections
 Create multiple sections with “## Section Title”.

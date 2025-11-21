@@ -16,7 +16,7 @@ class TwitterSchema(Schema):
         attribute="href",
         postprocess=splice_url
     )
-    content = Selector(selector=".tweet-content", text_content=True)
+    abstract = Selector(selector=".tweet-content", text_content=True)
     author = Selector(selector="div.fullname-and-username", text_content=True)
     time = Selector(selector="span.tweet-date a", attribute="title")
 

@@ -84,7 +84,8 @@ class RequestClient2(RequestClient):
                 remove_overlay_elements=True,
                 magic=True,
                 simulate_user=True,
-                override_navigator=True
+                override_navigator=True,
+                wait_for_timeout=5000
             )
             resp = await crawler.arun(
                 url=url if not kwargs.get("params") else f"{url}?{urlencode(kwargs.get('params', {}))}",
