@@ -1,6 +1,5 @@
 import logging
 import random
-import re
 from dataclasses import dataclass
 from typing import Optional
 from urllib.parse import urlencode
