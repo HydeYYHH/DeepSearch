@@ -1,6 +1,9 @@
 from dotenv import load_dotenv
 from zero import ZeroServer
 from msgspec import Struct
+import os
+import sys
+sys.path.append(os.path.normpath(os.path.join(os.path.dirname(__file__), "..")))
 
 from lib import Searcher
 from lib.search.engines import *
