@@ -39,7 +39,10 @@ searcher = Searcher()
 
 @app.register_rpc
 async def fetch(url: str) -> Result:
-    res = await searcher.search(target=url, engine=Engine())
+    res = await searcher.search(targets=[url], engine=Engine())
+    if not res:
+        return Result(title=url, content=[])
+    res = res[0]
     return Result(title=res.title, content=[item.__dict__ for item in res.content])
 
 
@@ -56,4 +59,4 @@ async def list_available_engines() -> dict[str, str]:
 
 if __name__ == '__main__':
     load_dotenv()
-    app.run(workers=4)
+    app.run(workers=2)

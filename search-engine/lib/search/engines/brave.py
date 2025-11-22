@@ -7,13 +7,13 @@ class BraveSchema(Schema):
     container = "div.snippet"
     url = Selector(selector="a", attribute="href")
     title = Selector(selector="div.title", text_content=True)
-    abstract = Selector(selector="div.snippet-description", text_content=True)
+    content = Selector(selector="div.snippet-description", text_content=True)
     source = Selector(selector="div.sitename", text_content=True)
 
 
 class BraveParser(Parser):
-    def __init__(self, doc: str):
-        super().__init__(doc, schema=BraveSchema)
+    def __init__(self, html: str, markdown: str):
+        super().__init__(html, markdown, schema=BraveSchema)
 
 
 class BraveEngine(Engine):

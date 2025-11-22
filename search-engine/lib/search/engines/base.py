@@ -6,10 +6,8 @@ from urllib.parse import urlencode
 
 from lxml.html import HtmlElement
 
-from lib.search.limiter import StandardRateLimitStrategy
-from lib.search.request import Response, RequestClient, RequestClient2
-from lxml import html
-from trafilatura import extract
+from lib.search.request import Response, RequestClient
+from lxml.html import fromstring
 
 from lib.search.proxy import ProxyForbiddenException
 from lib.search.utils import clean_text
@@ -41,6 +39,8 @@ class Schema(object):
     """
     container: str = "html"
     preprocess: Optional[Callable[[HtmlElement], HtmlElement]] = None
+    url: Optional[Selector] = None
+    content: Optional[Selector] = None
 
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
@@ -60,14 +60,15 @@ class Result(object):
 
 
 class Parser(object):
-    def __init__(self, doc: str, schema: Schema.__class__ = Schema):
-        self.doc = doc
+    def __init__(self, html: str, markdown: str, schema: Schema.__class__ = Schema):
+        self.html = html
+        self.markdown = markdown
         self.schema = schema
         self.selectors = {
             name: value for name, value in inspect.getmembers(self.schema)
             if isinstance(value, Selector)
         }
-        self.tree = html.fromstring(doc)
+        self.tree = fromstring(html)
 
     def title(self) -> str:
         titles = self.tree.cssselect("title")
@@ -75,14 +76,7 @@ class Parser(object):
 
     def parse(self) -> list[Schema]:
         if not self.selectors:
-            content = extract(
-                self.doc,
-                output_format="markdown",
-                with_metadata=True,
-                include_links=True,
-                include_images=False,
-            )
-            return [self.schema(content=content)]
+            return [self.schema(content=self.markdown)]
         results = []
         elements = self.tree.cssselect(self.schema.container)
         for element in elements:
@@ -117,11 +111,11 @@ class Parser(object):
             results.append(model)
         return results
 
+
 class Engine(object):
     NAME = "base"
     BASE_URL = None
     DESCRIPTION = None
-    LIMIT_STRATEGY = StandardRateLimitStrategy
 
     @classmethod
     def _query(cls, target: str) -> dict:
@@ -153,56 +147,64 @@ class Engine(object):
     def _detect_sorry(cls, result: Response) -> bool:
         return False
 
-    def __init__(self, parser: Parser.__class__ = Parser, client: RequestClient.__class__ = RequestClient2):
-        self.client = client()
+    def __init__(self, parser: Parser.__class__ = Parser):
         self.parser = parser
         self.logger = logging.getLogger('BaseSearchEngine')
 
-    async def search(self, target: str, num: int = -1, latest: bool = False, site: str = None, **kwargs) -> Result:
-        kwargs['headers'] = {**self.__class__._headers(), **kwargs.get('headers', {})}
-        kwargs['cookies'] = {**self.__class__._cookies(), **kwargs.get('cookies', {})}
-        # Apply time filter if specified
-        params = kwargs.get('params', {})
-        if latest:
-            params.update(self.__class__._latest() or {})
-        params.update(self.__class__._query(f"{target} site:{site}")) if site else params.update(
-            self.__class__._query(target))
-        kwargs['params'] = params
+    async def search(self, target: list[str], num: int = -1, latest: bool = False, **kwargs) -> list[Result]:
+            kwargs['headers'] = {**self.__class__._headers(), **kwargs.get('headers', {})}
+            kwargs['cookies'] = {**self.__class__._cookies(), **kwargs.get('cookies', {})}
+            targets = list(target or [])
 
-        url = self.__class__.BASE_URL if self.__class__.BASE_URL else target
+            urls: list[str] = []
+            if self.__class__.BASE_URL:
+                for t in targets:
+                    _params = (kwargs.get('params') or {}).copy()
+                    if latest:
+                        _params.update(self.__class__._latest() or {})
+                    _params.update(self.__class__._query(t))
+                    urls.append(f"{self.__class__.BASE_URL}?{urlencode(_params)}")
+                kwargs.pop('params', None)
+            else:
+                urls = targets
 
-        # Request
-        async def _search():
-            _resp = await self.client.get(url, **kwargs)
-            _resp.raise_for_status()
-            self.logger.info(f"Successfully get response from {url}?{urlencode(kwargs.get('params', {}))}")
-            parser = self.parser(_resp.html)
-            res = Result(title=parser.title(), content=parser.parse())
-            if self.__class__._detect_sorry(_resp):
-                self.logger.error(f"Sorry, some verification is required for {_resp.url}")
-                raise ProxyForbiddenException(f"Sorry, some verification is required for {_resp.url}")
-            return res
+            _responses = await RequestClient.get(urls, **kwargs)
+            results: list[Result] = []
+            for _resp in _responses or []:
+                self.logger.info(f"Get response from {_resp.url}")
+                parser = self.parser(_resp.html, _resp.markdown)
+                res = Result(title=parser.title(), content=parser.parse())
+                if self.__class__._detect_sorry(_resp):
+                    self.logger.error(f"Sorry, some verification is required for {_resp.url}")
+                    raise ProxyForbiddenException(f"Sorry, some verification is required for {_resp.url}")
+                if num > 0 and not self.__class__.BASE_URL:
+                    res = Result(title=res.title, content=res.content[:num])
+                results.append(res)
 
-        # Return first page results when num <= 0
-        if num <= 0:
-            return await _search()
+            if num > 0 and self.__class__.BASE_URL and len(targets) > 0:
+                for idx, t in enumerate(targets):
+                    base_params = (kwargs.get('params') or {}).copy()
+                    if latest:
+                        base_params.update(self.__class__._latest() or {})
+                    base_params.update(self.__class__._query(t))
+                    pager = self.__class__._pager()
+                    next(pager, None)
+                    content = results[idx].content
+                    count = len(content)
+                    while count < num and (page := next(pager, None)):
+                        _params = {**base_params, **page}
+                        page_url = f"{self.__class__.BASE_URL}?{urlencode(_params)}"
+                        more = await RequestClient.get([page_url], **kwargs)
+                        if not more:
+                            break
+                        more_resp = more[0]
+                        more_resp.raise_for_status()
+                        parser = self.parser(more_resp.html, more_resp.markdown)
+                        parsed = parser.parse()
+                        if not parsed:
+                            break
+                        count += len(parsed)
+                        content.extend(parsed)
+                    results[idx] = Result(title=results[idx].title, content=results[idx].content[:num])
 
-        resp = await _search()
-        content = resp.content
-        count = len(content)
-        pager = self.__class__._pager()
-        next(pager, None)
-        while count < num and (page := next(pager, None)):
-            params.update(page)
-            kwargs['params'] = params
-            resp = await _search()
-            if not resp.content:
-                break
-            count += len(resp.content)
-            content.extend(resp.content)
-
-        return Result(title=resp.title, content=content[:num])
-
-    async def aclose(self):
-        if hasattr(self.client, 'aclose'):
-            await self.client.aclose()
+            return results

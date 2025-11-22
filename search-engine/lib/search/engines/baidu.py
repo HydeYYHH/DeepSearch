@@ -2,21 +2,22 @@ import logging
 from time import time
 from typing import Iterator
 
-from curl_cffi import Response
 
 from lib.search.engines.base import Engine, Parser, Schema, Selector
+from lib.search.request import Response
+
 
 class BaiduSchema(Schema):
     container = "div.result"
     url = Selector(selector=None, attribute="mu")
     title = Selector(selector="a", text_content=True)
-    abstract = Selector(selector='[data-module="abstract"]', text_content=True)
+    content = Selector(selector='[data-module="abstract"]', text_content=True)
     source = Selector(selector="span.cosc-source-text", text_content=True)
 
 
 class BaiduParser(Parser):
-    def __init__(self, doc: str):
-        super().__init__(doc, schema=BaiduSchema)
+    def __init__(self, html: str, markdown: str):
+        super().__init__(html, markdown, schema=BaiduSchema)
 
 
 class BaiduEngine(Engine):

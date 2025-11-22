@@ -37,7 +37,6 @@ DeepSearch is an LLM-powered web search engine focused on deep web information r
 5. Export environment variables
     ```bash
     export GOOGLE_API_KEY=Your Google API Key
-    export HUGGING_FACE_HUB_TOKEN=Your Hugging Face Hub Token
     export USE_ONLINE_EMBEDDING=False # Set to True if you want to use gemini online embedding else use local embedding pretrained model downloading from huggingface
     ```
 6. Run the application

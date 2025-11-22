@@ -8,13 +8,13 @@ class So360Schema(Schema):
     container = "li.res-list"
     url = Selector(selector=".res-title a", attribute="data-mdurl")
     title = Selector(selector=".res-title a", text_content=True)
-    abstract = Selector(selector="p.res-desc", text_content=True)
+    content = Selector(selector="p.res-desc", text_content=True)
     source = Selector(selector="cite", text_content=True)
 
 
 class So360Parser(Parser):
-    def __init__(self, doc: str):
-        super().__init__(doc, schema=So360Schema)
+    def __init__(self, html: str, markdown: str):
+        super().__init__(html, markdown, schema=So360Schema)
 
 
 class So360Engine(Engine):

@@ -16,14 +16,14 @@ class TwitterSchema(Schema):
         attribute="href",
         postprocess=splice_url
     )
-    abstract = Selector(selector=".tweet-content", text_content=True)
+    content = Selector(selector=".tweet-content", text_content=True)
     author = Selector(selector="div.fullname-and-username", text_content=True)
     time = Selector(selector="span.tweet-date a", attribute="title")
 
 
 class TwitterParser(Parser):
-    def __init__(self, doc: str):
-        super().__init__(doc, schema=TwitterSchema)
+    def __init__(self, html: str, markdown: str):
+        super().__init__(html, markdown, schema=TwitterSchema)
 
 
 class TwitterEngine(Engine):

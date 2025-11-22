@@ -18,13 +18,13 @@ class BingSchema(Schema):
     container = "li.b_algo"
     url = Selector(selector="h2 a", attribute="href", postprocess=extrac_url)
     title = Selector(selector="h2 a", text_content=True)
-    abstract = Selector(selector="p.b_lineclamp2", text_content=True)
+    content = Selector(selector="p.b_lineclamp2", text_content=True)
     source = Selector(selector="div.tptt", text_content=True)
 
 
 class BingParser(Parser):
-    def __init__(self, doc: str):
-        super().__init__(doc, schema=BingSchema)
+    def __init__(self, html: str, markdown: str):
+        super().__init__(html, markdown, schema=BingSchema)
 
 
 class BingEngine(Engine):

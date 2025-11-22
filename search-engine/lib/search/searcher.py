@@ -9,15 +9,12 @@ from google.genai import types
 
 import hnswlib
 import numpy as np
-from curl_cffi import ProxySpec
 from google import genai
-from tenacity import retry, stop_after_attempt, wait_exponential
 from tldextract import tldextract
 
 from lib.search.engines.base import Engine, Result, Schema
 from dataclasses import dataclass
 
-from lib.search.limiter import RateLimiter
 from lib.search.proxy import ProxyPool
 from lib.search.utils import auto_aclose
 
@@ -43,7 +40,6 @@ class EmbeddingModel(object):
             self.model = self.client.models
         else:
             from sentence_transformers import SentenceTransformer
-            # self.model = SentenceTransformer("google/embeddinggemma-300m")
             self.model = SentenceTransformer("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
 
     def encode_documents(self, text: list[str]):
@@ -51,7 +47,7 @@ class EmbeddingModel(object):
             _all = []
             BATCH = 100
             for i in range(0, len(text), BATCH):
-                batch = text[i:i+BATCH]
+                batch = text[i:i + BATCH]
                 embs = self.model.embed_content(
                     model="gemini-embedding-001", contents=batch,
                     config=types.EmbedContentConfig(task_type="RETRIEVAL_DOCUMENT")
@@ -63,7 +59,6 @@ class EmbeddingModel(object):
             arr = self.model.encode(
                 text, normalize_embeddings=True, convert_to_numpy=True,
                 batch_size=128
-                # prompt_name="document"
             )
             return arr.astype(np.float32)
 
@@ -77,8 +72,7 @@ class EmbeddingModel(object):
         else:
             arr = self.model.encode(
                 [text], normalize_embeddings=True, convert_to_numpy=True,
-                batch_size=128, 
-                # prompt_name="query"
+                batch_size=128,
             )[0]
             return arr.astype(np.float32)
 
@@ -87,7 +81,6 @@ class Searcher(object):
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         self.proxies = ProxyPool()
-        self.limiter = RateLimiter()
         online = os.getenv('USE_ONLINE_EMBEDDING', 'false').lower() == 'true'
         self._emb_model = EmbeddingModel(online=online)
 
@@ -97,26 +90,17 @@ class Searcher(object):
         from semchunk import chunkerify
         return chunkerify('google-bert/bert-base-multilingual-uncased', 512)
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=5, max=30))
     @auto_aclose
-    async def search(self, target: str, engine: Engine, **kwargs) -> Result:
+    async def search(self, targets: list[str], engine: Engine, **kwargs) -> list[Result]:
         with self.proxies.get() as proxy:
-            if engine.__class__.NAME == 'base':
-                self.limiter.allow(f"{proxy}:{_extract_domain(target)}", strategy=engine.__class__.LIMIT_STRATEGY)
-            else:
-                self.limiter.allow(f"{proxy}:{engine.__class__.NAME}", strategy=engine.__class__.LIMIT_STRATEGY)
-            if proxy:
-                kwargs.update({"proxies": ProxySpec(
-                    http=f"http://{proxy}",
-                    https=f"https://{proxy}",
-                )})
-            alt = kwargs.pop("alt", None)
+            proxy and kwargs.update({"proxy": f"http://{proxy}"})
+            alts = kwargs.pop("alts", None)
             try:
-                return await engine.search(target, **kwargs)
+                return await engine.search(targets, **kwargs)
             except Exception as e:
-                self.logger.error(f"Error searching {target} with {engine.__class__.__name__}: {e}")
-                if alt:
-                    return Result(title=query, content=[alt])
+                self.logger.error(f"Error occurred while searching: {e}")
+                if isinstance(alts, list) and len(alts) == len(targets):
+                    return [Result(title=t, content=[Schema(content=a)]) for t, a in zip(targets, alts)]
                 else:
                     raise e
 
@@ -124,11 +108,15 @@ class Searcher(object):
         total = sum(engine.weight for engine in engines)
         nums = [max(1, math.ceil(cfg.weight / total * num * 1.5)) for cfg in engines]
         tasks = [
-            self.search(query, cfg.engine, num=nums[i], **kwargs)
+            self.search([query], cfg.engine, num=nums[i], **kwargs)
             for i, cfg in enumerate(engines)
         ]
-        results = await asyncio.gather(*tasks)
-        # Dedup
+        gathered = await asyncio.gather(*tasks, return_exceptions=True)
+        results: list[Result] = []
+        for item in gathered:
+            if isinstance(item, Exception):
+                continue
+            results.extend(item)
         contents = {}
         for res in results or []:
             for item in (res.content if res else []):
@@ -137,28 +125,21 @@ class Searcher(object):
         if not contents:
             return Result(title=query, content=[])
         contents = list(contents.values())
-        # Preview
-        tasks = [
-            self.search(content.url, Engine(), alt=content.abstract, **kwargs)
-            for content in contents
-        ]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        results = [res for res in results if not isinstance(res, Exception)]
-        # Chunking
+        targets = [content.url for content in contents]
+        alts = [content.content for content in contents]
+        results = await self.search(targets, Engine(), alts=alts, **kwargs)
         chunks, offsets = self._chunker().__call__([f"{res.title}\n{res.content[0].content}" for res in results],
                                                    offsets=True, overlap=0.2)
         chunks = list(chain.from_iterable(chunks))
         doc_offsets = []
         for doc_idx, doc_chunks in enumerate(offsets):
             doc_offsets.extend([doc_idx] * len(doc_chunks))
-        # Initialize index
         embeddings = self._emb_model.encode_documents(chunks)
         dim = embeddings.shape[1]
         index = hnswlib.Index(space='cosine', dim=dim)
         index.init_index(max_elements=len(embeddings), ef_construction=200, M=16)
         index.add_items(embeddings, np.arange(len(embeddings)))
         index.set_ef(100)
-        # Query
         query_embedding = self._emb_model.encode_query(query).reshape(1, -1)
         labels, _ = index.knn_query(query_embedding, k=min(num, len(chunks)))
         labels = labels[0].astype(int)

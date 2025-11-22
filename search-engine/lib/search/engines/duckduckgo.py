@@ -24,12 +24,12 @@ class DuckDuckGoSchema(Schema):
         postprocess=extract_url
     )
     title = Selector(selector="a.result__a", text_content=True)
-    abstract = Selector(selector="a.result__snippet", text_content=True)
+    content = Selector(selector="a.result__snippet", text_content=True)
 
 
 class DuckDuckGoParser(Parser):
-    def __init__(self, doc: str):
-        super().__init__(doc, schema=DuckDuckGoSchema)
+    def __init__(self, html: str, markdown: str):
+        super().__init__(html, markdown, schema=DuckDuckGoSchema)
 
 
 class DuckDuckGoEngine(Engine):

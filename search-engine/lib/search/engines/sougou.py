@@ -8,13 +8,13 @@ class SougouSchema(Schema):
     container = ".vrwrap"
     url = Selector(selector=".r-sech[data-url]", attribute="data-url")
     title = Selector(selector=".vr-title a", text_content=True)
-    abstract = Selector(selector=".text-layout.space-txt", text_content=True)
+    content = Selector(selector=".text-layout.space-txt", text_content=True)
     source = Selector(selector=".text-layout.citeurl", text_content=True)
 
 
 class SougouParser(Parser):
-    def __init__(self, doc: str):
-        super().__init__(doc, schema=SougouSchema)
+    def __init__(self, html: str, markdown: str):
+        super().__init__(html, markdown, schema=SougouSchema)
 
 
 class SougouEngine(Engine):

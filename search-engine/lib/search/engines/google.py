@@ -6,20 +6,20 @@ from lxml.html import HtmlElement
 from lib.search.engines.base import Engine, Parser, Schema, Selector
 
 
-def preprocess(doc: HtmlElement) -> Optional[HtmlElement]:
-    return doc if doc.cssselect("a")[0].get("href").startswith("http") else None
+def preprocess(html: HtmlElement) -> Optional[HtmlElement]:
+    return html if html.cssselect("a")[0].get("href").startswith("http") else None
 
 class GoogleSchema(Schema):
     container = "div[data-rpos]"
     url = Selector(selector="a", attribute="href")
     title = Selector(selector="a", text_content=True)
-    abstract = Selector(selector='[data-sncf="1"]', text_content=True)
+    content = Selector(selector='[data-sncf="1"]', text_content=True)
     source = Selector(selector='div.notranslate', text_content=True)
     preprocess = preprocess
 
 class GoogleParser(Parser):
-    def __init__(self, doc: str):
-        super().__init__(doc, schema=GoogleSchema)
+    def __init__(self, html: str, markdown: str):
+        super().__init__(html, markdown, schema=GoogleSchema)
 
 
 class GoogleEngine(Engine):

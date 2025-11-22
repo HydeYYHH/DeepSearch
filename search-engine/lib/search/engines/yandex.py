@@ -13,13 +13,13 @@ class YandexSchema(Schema):
     container = "li.serp-item"
     url = Selector(selector="a", attribute="href")
     title = Selector(selector=".OrganicTitle-LinkText", text_content=True)
-    abstract = Selector(selector="div.TextContainer", text_content=True)
+    content = Selector(selector="div.TextContainer", text_content=True)
     source = Selector(selector="div.OrganicHost-Title", text_content=True)
 
 
 class YandexParser(Parser):
-    def __init__(self, doc: str):
-        super().__init__(doc, schema=YandexSchema)
+    def __init__(self, html: str, markdown: str):
+        super().__init__(html, markdown, schema=YandexSchema)
 
 
 class YandexEngine(Engine):
