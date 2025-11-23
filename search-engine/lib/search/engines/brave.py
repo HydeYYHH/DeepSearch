@@ -2,6 +2,8 @@ import logging
 from typing import Iterator
 
 from lib.search.engines.base import Schema, Selector, Parser, Engine
+from lib.search.request import RequestClient
+
 
 class BraveSchema(Schema):
     container = "div.snippet"
@@ -12,8 +14,8 @@ class BraveSchema(Schema):
 
 
 class BraveParser(Parser):
-    def __init__(self, doc: str):
-        super().__init__(doc, schema=BraveSchema)
+    def __init__(self, html: str, markdown: str):
+        super().__init__(html, markdown, schema=BraveSchema)
 
 
 class BraveEngine(Engine):
@@ -38,6 +40,6 @@ class BraveEngine(Engine):
     def _latest(cls) -> dict | None:
         return {"tf": "pd"}
 
-    def __init__(self):
-        super().__init__(parser=BraveParser)
+    def __init__(self, client: RequestClient):
+        super().__init__(parser=BraveParser, client=client)
         self.logger = logging.getLogger(__name__)

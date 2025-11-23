@@ -4,6 +4,7 @@ from typing import Iterator
 from urllib.parse import unquote
 
 from lib.search.engines.base import Schema, Selector, Parser, Engine
+from lib.search.request import RequestClient
 
 
 def extract_url(url: str) -> str:
@@ -28,8 +29,8 @@ class DuckDuckGoSchema(Schema):
 
 
 class DuckDuckGoParser(Parser):
-    def __init__(self, doc: str):
-        super().__init__(doc, schema=DuckDuckGoSchema)
+    def __init__(self, html: str, markdown: str):
+        super().__init__(html, markdown, schema=DuckDuckGoSchema)
 
 
 class DuckDuckGoEngine(Engine):
@@ -50,6 +51,6 @@ class DuckDuckGoEngine(Engine):
             yield {"s": pn}
             pn += 10
 
-    def __init__(self):
-        super().__init__(DuckDuckGoParser)
+    def __init__(self, client: RequestClient):
+        super().__init__(client=client, parser=DuckDuckGoParser)
         self.logger = logging.getLogger(__name__)

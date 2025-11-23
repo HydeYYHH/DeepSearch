@@ -1,0 +1,2 @@
+class ProxyForbiddenException(Exception):
+    pass

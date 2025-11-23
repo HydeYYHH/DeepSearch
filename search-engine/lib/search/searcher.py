@@ -9,7 +9,6 @@ from google.genai import types
 
 import hnswlib
 import numpy as np
-from curl_cffi import ProxySpec
 from google import genai
 from tenacity import retry, stop_after_attempt, wait_exponential
 from tldextract import tldextract
@@ -17,9 +16,7 @@ from tldextract import tldextract
 from lib.search.engines.base import Engine, Result, Schema
 from dataclasses import dataclass
 
-from lib.search.limiter import RateLimiter
-from lib.search.proxy import ProxyPool
-from lib.search.utils import auto_aclose
+from lib.search.request import RequestClient
 
 
 def _extract_domain(url: str) -> str:
@@ -43,7 +40,6 @@ class EmbeddingModel(object):
             self.model = self.client.models
         else:
             from sentence_transformers import SentenceTransformer
-            # self.model = SentenceTransformer("google/embeddinggemma-300m")
             self.model = SentenceTransformer("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
 
     def encode_documents(self, text: list[str]):
@@ -51,7 +47,7 @@ class EmbeddingModel(object):
             _all = []
             BATCH = 100
             for i in range(0, len(text), BATCH):
-                batch = text[i:i+BATCH]
+                batch = text[i:i + BATCH]
                 embs = self.model.embed_content(
                     model="gemini-embedding-001", contents=batch,
                     config=types.EmbedContentConfig(task_type="RETRIEVAL_DOCUMENT")
@@ -63,7 +59,6 @@ class EmbeddingModel(object):
             arr = self.model.encode(
                 text, normalize_embeddings=True, convert_to_numpy=True,
                 batch_size=128
-                # prompt_name="document"
             )
             return arr.astype(np.float32)
 
@@ -77,8 +72,7 @@ class EmbeddingModel(object):
         else:
             arr = self.model.encode(
                 [text], normalize_embeddings=True, convert_to_numpy=True,
-                batch_size=128, 
-                # prompt_name="query"
+                batch_size=128,
             )[0]
             return arr.astype(np.float32)
 
@@ -86,8 +80,6 @@ class EmbeddingModel(object):
 class Searcher(object):
     def __init__(self):
         self.logger = logging.getLogger(__name__)
-        self.proxies = ProxyPool()
-        self.limiter = RateLimiter()
         online = os.getenv('USE_ONLINE_EMBEDDING', 'false').lower() == 'true'
         self._emb_model = EmbeddingModel(online=online)
 
@@ -98,33 +90,21 @@ class Searcher(object):
         return chunkerify('google-bert/bert-base-multilingual-uncased', 512)
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=5, max=30))
-    @auto_aclose
-    async def search(self, target: str, engine: Engine, **kwargs) -> Result:
-        with self.proxies.get() as proxy:
-            if engine.__class__.NAME == 'base':
-                self.limiter.allow(f"{proxy}:{_extract_domain(target)}", strategy=engine.__class__.LIMIT_STRATEGY)
-            else:
-                self.limiter.allow(f"{proxy}:{engine.__class__.NAME}", strategy=engine.__class__.LIMIT_STRATEGY)
-            if proxy:
-                kwargs.update({"proxies": ProxySpec(
-                    http=f"http://{proxy}",
-                    https=f"https://{proxy}",
-                )})
-            alt = kwargs.pop("alt", None)
-            try:
-                return await engine.search(target, **kwargs)
-            except Exception as e:
-                self.logger.error(f"Error searching {target} with {engine.__class__.__name__}: {e}")
-                if alt:
-                    return Result(title=query, content=[alt])
-                else:
-                    raise e
+    async def search(self, target: str, engine: Engine, abstract: Schema = None, **kwargs) -> Result:
+        try:
+            return await engine.search(target, **kwargs)
+        except Exception as e:
+            self.logger.error(f"Error occurred while searching: {e}")
+            if abstract:
+                return Result(title=target, content=[abstract])
+            raise e
 
-    async def aggregate_search(self, query: str, engines: list[EngineConfig], num: int = 10, **kwargs) -> Result:
+    async def aggregate_search(self, query: str, client: RequestClient, engines: list[EngineConfig], num: int = 10,
+                               **kwargs) -> Result:
         total = sum(engine.weight for engine in engines)
         nums = [max(1, math.ceil(cfg.weight / total * num * 1.5)) for cfg in engines]
         tasks = [
-            self.search(query, cfg.engine, num=nums[i], **kwargs)
+            self.search(target=query, engine=cfg.engine, abstract=None, num=nums[i], **kwargs)
             for i, cfg in enumerate(engines)
         ]
         results = await asyncio.gather(*tasks)
@@ -139,7 +119,7 @@ class Searcher(object):
         contents = list(contents.values())
         # Preview
         tasks = [
-            self.search(content.url, Engine(), alt=content.abstract, **kwargs)
+            self.search(target=content.url, engine=Engine(client=client), abstract=content.abstract, **kwargs)
             for content in contents
         ]
         results = await asyncio.gather(*tasks, return_exceptions=True)

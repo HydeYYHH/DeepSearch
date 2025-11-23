@@ -46,9 +46,11 @@ class Safety(BaseModel):
 
 load_dotenv()
 llm = ChatGoogleGenerativeAI(
-    model="gemini-2.5-pro",
+    model="gemini-2.5-flash",
     temperature=0.4,
     max_retries=3,
+    thinking_budget=-1,
+    include_thoughts=True,
 )
 llm_with_tools = llm.bind_tools(
     [StructuredTool(name=tool.__name__, description=tool.__doc__, args_schema=tool) for tool in tools_signatures]

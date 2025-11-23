@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 
 from lib import Searcher
+from lib.search.request import RequestClient
 
 
 class Preference(Enum):
@@ -18,5 +19,5 @@ class Preset(ABC):
         self.searcher = searcher
 
     @abstractmethod
-    async def search(self, query: str, preference: Preference):
+    async def search(self, query: str, preference: Preference, client: RequestClient):
         pass

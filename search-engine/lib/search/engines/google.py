@@ -4,6 +4,7 @@ from typing import Iterator, Optional
 from lxml.html import HtmlElement
 
 from lib.search.engines.base import Engine, Parser, Schema, Selector
+from lib.search.request import RequestClient
 
 
 def preprocess(doc: HtmlElement) -> Optional[HtmlElement]:
@@ -18,8 +19,8 @@ class GoogleSchema(Schema):
     preprocess = preprocess
 
 class GoogleParser(Parser):
-    def __init__(self, doc: str):
-        super().__init__(doc, schema=GoogleSchema)
+    def __init__(self, html: str, markdown: str):
+        super().__init__(html, markdown, schema=GoogleSchema)
 
 
 class GoogleEngine(Engine):
@@ -48,6 +49,6 @@ class GoogleEngine(Engine):
         """
         return {"tbs": "qdr:d"}
 
-    def __init__(self):
-        super().__init__(GoogleParser)
+    def __init__(self, client: RequestClient):
+        super().__init__(client=client, parser=GoogleParser)
         self.logger = logging.getLogger('GoogleSearchEngine')

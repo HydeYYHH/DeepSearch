@@ -2,6 +2,7 @@ import logging
 from typing import Iterator
 
 from lib.search.engines.base import Schema, Parser, Engine, Selector
+from lib.search.request import RequestClient
 
 
 class SougouSchema(Schema):
@@ -13,8 +14,8 @@ class SougouSchema(Schema):
 
 
 class SougouParser(Parser):
-    def __init__(self, doc: str):
-        super().__init__(doc, schema=SougouSchema)
+    def __init__(self, html: str, markdown: str):
+        super().__init__(html, markdown, schema=SougouSchema)
 
 
 class SougouEngine(Engine):
@@ -36,6 +37,6 @@ class SougouEngine(Engine):
     def _latest(cls) -> dict | None:
         return {"s_from": "inttime_day"}
 
-    def __init__(self):
-        super().__init__(parser=SougouParser)
+    def __init__(self, client: RequestClient):
+        super().__init__(parser=SougouParser, client=client)
         self.logger = logging.getLogger(__name__)

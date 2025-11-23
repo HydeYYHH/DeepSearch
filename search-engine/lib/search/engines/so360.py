@@ -2,6 +2,7 @@ import logging
 from typing import Iterator
 
 from lib.search.engines.base import Schema, Selector, Parser, Engine
+from lib.search.request import RequestClient
 
 
 class So360Schema(Schema):
@@ -13,8 +14,8 @@ class So360Schema(Schema):
 
 
 class So360Parser(Parser):
-    def __init__(self, doc: str):
-        super().__init__(doc, schema=So360Schema)
+    def __init__(self, html: str, markdown: str):
+        super().__init__(html, markdown, schema=So360Schema)
 
 
 class So360Engine(Engine):
@@ -39,6 +40,6 @@ class So360Engine(Engine):
     def _latest(cls) -> dict | None:
         return {"adv_t": "d"}
 
-    def __init__(self):
-        super().__init__(So360Parser)
+    def __init__(self, client: RequestClient):
+        super().__init__(client=client, parser=So360Parser)
         self.logger = logging.getLogger('So360SearchEngine')

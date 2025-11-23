@@ -47,7 +47,6 @@ DeepSearch 采用模块化架构，以实现高效的网络搜索和 LLM 驱动�
 5. 导入环境变量
     ```bash
     export GOOGLE_API_KEY=Your Google API Key
-    export HUGGING_FACE_HUB_TOKEN=Your Hugging Face Hub Token
     export USE_ONLINE_EMBEDDING=False # 如果想使用 gemini 在线嵌入设置为 True，否则使用从 huggingface 下载的本地嵌入预训练模型
     ```
 6. 运行应用

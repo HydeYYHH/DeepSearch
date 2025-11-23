@@ -2,7 +2,7 @@ import logging
 from typing import Iterator
 
 from lib.search.engines.base import Schema, Selector, Parser, Engine
-from lib.search.request import Response
+from lib.search.request import Response, RequestClient
 
 
 # Due to Yandex's anti-scraping policies,
@@ -18,8 +18,8 @@ class YandexSchema(Schema):
 
 
 class YandexParser(Parser):
-    def __init__(self, doc: str):
-        super().__init__(doc, schema=YandexSchema)
+    def __init__(self, html: str, markdown: str):
+        super().__init__(html, markdown, schema=YandexSchema)
 
 
 class YandexEngine(Engine):
@@ -45,6 +45,6 @@ class YandexEngine(Engine):
     def _detect_sorry(cls, result: Response) -> bool:
         return "Are you not a robot?" in result.html
 
-    def __init__(self):
-        super().__init__(parser=YandexParser)
+    def __init__(self, client: RequestClient):
+        super().__init__(parser=YandexParser, client=client)
         self.logger = logging.getLogger(__name__)

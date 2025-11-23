@@ -6,6 +6,9 @@ from lib.search.engines.base import Schema, Selector, Parser, Engine
 
 import base64
 
+from lib.search.request import RequestClient
+
+
 def extrac_url(url: str) -> str:
     encoded_url = url.split('&u=a1')[1].split('&ntb=1')[0]
     encoded_url = encoded_url.replace('-', '+').replace('_', '/')
@@ -23,8 +26,8 @@ class BingSchema(Schema):
 
 
 class BingParser(Parser):
-    def __init__(self, doc: str):
-        super().__init__(doc, schema=BingSchema)
+    def __init__(self, html: str, markdown: str):
+        super().__init__(html, markdown, schema=BingSchema)
 
 
 class BingEngine(Engine):
@@ -46,6 +49,6 @@ class BingEngine(Engine):
     def _latest(cls) -> dict | None:
         return {"filters": 'ex1%3a"ez1"'}
 
-    def __init__(self):
-        super().__init__(parser=BingParser)
+    def __init__(self, client: RequestClient):
+        super().__init__(parser=BingParser, client=client)
         self.logger = logging.getLogger(__name__)

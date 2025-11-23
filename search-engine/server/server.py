@@ -3,7 +3,9 @@ from zero import ZeroServer
 from msgspec import Struct
 import os
 import sys
+
 sys.path.append(os.path.normpath(os.path.join(os.path.dirname(__file__), "..")))
+from lib.search.request import RequestClient
 
 from lib import Searcher
 from lib.search.engines import *
@@ -34,20 +36,22 @@ available_presets = {
     "default": DefaultPreset,
 }
 
+client = RequestClient()
 searcher = Searcher()
 
 
 @app.register_rpc
 async def fetch(url: str) -> Result:
-    res = await searcher.search(target=url, engine=Engine())
+    res = await searcher.search(target=url, engine=Engine(client=client))
     return Result(title=res.title, content=[item.__dict__ for item in res.content])
 
 
 @app.register_rpc
 async def search(config: SearchConfig) -> Result:
     res = await (available_presets[config.preset.lower()](searcher)
-                 .search(config.target, Preference(config.preference.lower())))
+                 .search(config.target, Preference(config.preference.lower()), client=client))
     return Result(title=res.title, content=[item.__dict__ for item in res.content])
+
 
 @app.register_rpc
 async def list_available_engines() -> dict[str, str]:
@@ -56,4 +60,6 @@ async def list_available_engines() -> dict[str, str]:
 
 if __name__ == '__main__':
     load_dotenv()
-    app.run(workers=4)
+    app.run(workers=2)
+    from lib.search.utils import close_async
+    close_async(client)

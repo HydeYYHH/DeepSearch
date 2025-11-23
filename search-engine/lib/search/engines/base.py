@@ -4,14 +4,10 @@ from dataclasses import dataclass
 from typing import Optional, Iterator, Callable
 from urllib.parse import urlencode
 
-from lxml.html import HtmlElement
+from lxml.html import HtmlElement, fromstring
 
-from lib.search.limiter import StandardRateLimitStrategy
-from lib.search.request import Response, RequestClient, RequestClient2
-from lxml import html
-from trafilatura import extract
+from lib.search.request import Response, RequestClient
 
-from lib.search.proxy import ProxyForbiddenException
 from lib.search.utils import clean_text
 
 
@@ -40,6 +36,8 @@ class Schema(object):
     - preprocess: function to preprocess the element before extraction
     """
     container: str = "html"
+    url: Optional[Selector] = None
+    abstract: Optional[Selector] = None
     preprocess: Optional[Callable[[HtmlElement], HtmlElement]] = None
 
     def __init__(self, **kwargs):
@@ -60,14 +58,15 @@ class Result(object):
 
 
 class Parser(object):
-    def __init__(self, doc: str, schema: Schema.__class__ = Schema):
-        self.doc = doc
+    def __init__(self, html: str, markdown: str, schema: Schema.__class__ = Schema):
+        self.html = html
+        self.markdown = markdown
         self.schema = schema
         self.selectors = {
             name: value for name, value in inspect.getmembers(self.schema)
             if isinstance(value, Selector)
         }
-        self.tree = html.fromstring(doc)
+        self.tree = fromstring(html)
 
     def title(self) -> str:
         titles = self.tree.cssselect("title")
@@ -75,14 +74,7 @@ class Parser(object):
 
     def parse(self) -> list[Schema]:
         if not self.selectors:
-            content = extract(
-                self.doc,
-                output_format="markdown",
-                with_metadata=True,
-                include_links=True,
-                include_images=False,
-            )
-            return [self.schema(content=content)]
+            return [self.schema(content=self.markdown)]
         results = []
         elements = self.tree.cssselect(self.schema.container)
         for element in elements:
@@ -117,22 +109,17 @@ class Parser(object):
             results.append(model)
         return results
 
+
+from lib.search.exception import ProxyForbiddenException
+
+
 class Engine(object):
     NAME = "base"
     BASE_URL = None
     DESCRIPTION = None
-    LIMIT_STRATEGY = StandardRateLimitStrategy
 
     @classmethod
     def _query(cls, target: str) -> dict:
-        return {}
-
-    @classmethod
-    def _cookies(cls) -> dict:
-        return {}
-
-    @classmethod
-    def _headers(cls) -> dict:
         return {}
 
     @classmethod
@@ -153,20 +140,16 @@ class Engine(object):
     def _detect_sorry(cls, result: Response) -> bool:
         return False
 
-    def __init__(self, parser: Parser.__class__ = Parser, client: RequestClient.__class__ = RequestClient2):
-        self.client = client()
+    def __init__(self, client: RequestClient, parser: Parser.__class__ = Parser):
+        self.client = client
         self.parser = parser
         self.logger = logging.getLogger('BaseSearchEngine')
 
-    async def search(self, target: str, num: int = -1, latest: bool = False, site: str = None, **kwargs) -> Result:
-        kwargs['headers'] = {**self.__class__._headers(), **kwargs.get('headers', {})}
-        kwargs['cookies'] = {**self.__class__._cookies(), **kwargs.get('cookies', {})}
-        # Apply time filter if specified
+    async def search(self, target: str, num: int = -1, latest: bool = False, **kwargs) -> Result:
         params = kwargs.get('params', {})
         if latest:
             params.update(self.__class__._latest() or {})
-        params.update(self.__class__._query(f"{target} site:{site}")) if site else params.update(
-            self.__class__._query(target))
+        params.update(self.__class__._query(target))
         kwargs['params'] = params
 
         url = self.__class__.BASE_URL if self.__class__.BASE_URL else target
@@ -176,7 +159,7 @@ class Engine(object):
             _resp = await self.client.get(url, **kwargs)
             _resp.raise_for_status()
             self.logger.info(f"Successfully get response from {url}?{urlencode(kwargs.get('params', {}))}")
-            parser = self.parser(_resp.html)
+            parser = self.parser(html=_resp.html, markdown=_resp.markdown)
             res = Result(title=parser.title(), content=parser.parse())
             if self.__class__._detect_sorry(_resp):
                 self.logger.error(f"Sorry, some verification is required for {_resp.url}")

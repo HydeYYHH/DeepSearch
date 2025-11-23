@@ -2,9 +2,9 @@ import logging
 from time import time
 from typing import Iterator
 
-from curl_cffi import Response
-
 from lib.search.engines.base import Engine, Parser, Schema, Selector
+from lib.search.request import Response, RequestClient
+
 
 class BaiduSchema(Schema):
     container = "div.result"
@@ -15,8 +15,8 @@ class BaiduSchema(Schema):
 
 
 class BaiduParser(Parser):
-    def __init__(self, doc: str):
-        super().__init__(doc, schema=BaiduSchema)
+    def __init__(self, html: str, markdown: str):
+        super().__init__(html, markdown, schema=BaiduSchema)
 
 
 class BaiduEngine(Engine):
@@ -51,6 +51,6 @@ class BaiduEngine(Engine):
     def _detect_sorry(cls, result: Response) -> bool:
         return result.url.startswith("https://wappass.baidu.com/static/captcha")
 
-    def __init__(self):
-        super().__init__(BaiduParser)
+    def __init__(self, client: RequestClient):
+        super().__init__(client=client, parser=BaiduParser)
         self.logger = logging.getLogger('BaiduSearchEngine')

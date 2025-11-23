@@ -1,6 +1,7 @@
 import logging
 
 from lib.search.engines.base import Schema, Selector, Parser, Engine
+from lib.search.request import RequestClient
 
 
 def splice_url(url: str) -> str:
@@ -22,8 +23,8 @@ class TwitterSchema(Schema):
 
 
 class TwitterParser(Parser):
-    def __init__(self, doc: str):
-        super().__init__(doc, schema=TwitterSchema)
+    def __init__(self, html: str, markdown: str):
+        super().__init__(html, markdown, schema=TwitterSchema)
 
 
 class TwitterEngine(Engine):
@@ -34,6 +35,6 @@ class TwitterEngine(Engine):
     def _query(cls, target: str) -> dict:
         return {"q": target}
 
-    def __init__(self):
-        super().__init__(parser=TwitterParser)
+    def __init__(self, client: RequestClient):
+        super().__init__(parser=TwitterParser, client=client)
         self.logger = logging.getLogger(__name__)
