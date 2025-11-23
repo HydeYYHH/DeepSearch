@@ -10,11 +10,13 @@ from lib.search.request import RequestClient
 
 
 def extrac_url(url: str) -> str:
-    encoded_url = url.split('&u=a1')[1].split('&ntb=1')[0]
-    encoded_url = encoded_url.replace('-', '+').replace('_', '/')
-    padding = '=' * ((4 - len(encoded_url) % 4) % 4)
-    encoded_url += padding
-    return base64.b64decode(encoded_url).decode('utf-8')
+    if '&u=a1' in url and '&ntb=1' in url:
+        encoded_url = url.split('&u=a1')[1].split('&ntb=1')[0]
+        encoded_url = encoded_url.replace('-', '+').replace('_', '/')
+        padding = '=' * ((4 - len(encoded_url) % 4) % 4)
+        encoded_url += padding
+        return base64.b64decode(encoded_url).decode('utf-8')
+    return url
 
 
 class BingSchema(Schema):

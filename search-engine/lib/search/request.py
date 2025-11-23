@@ -49,7 +49,7 @@ class RequestClient:
             url=resp.url,
             status_code=resp.status_code if resp.status_code else 200 if resp.success else 400,
             html=resp.html,
-            markdown=resp.markdown.raw_markdown
+            markdown=resp.markdown.raw_markdown if resp.markdown else None
         )
         wrapped.raise_for_status()
         return wrapped

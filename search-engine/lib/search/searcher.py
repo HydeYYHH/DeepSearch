@@ -65,7 +65,10 @@ class Searcher(object):
             if isinstance(res, Exception):
                 continue
             text = f"{res.title}\n{res.content[0].content if res.content else ''}"
-            documents.append(Document(text=text, metadata={"url": contents[i].url}))
+            doc = Document(text=text, metadata={"url": contents[i].url})
+            doc.excluded_embed_metadata_keys = ["url"]
+            doc.excluded_llm_metadata_keys = ["url"]
+            documents.append(doc)
         splitter = SentenceSplitter(chunk_size=512, chunk_overlap=128)
         nodes = splitter.get_nodes_from_documents(documents)
         documents = [Document(text=n.text, metadata={"url": n.metadata.get("url")}) for n in nodes]
