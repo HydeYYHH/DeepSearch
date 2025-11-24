@@ -13,8 +13,7 @@ DeepSearch 采用模块化架构，以实现高效的网络搜索和 LLM 驱动�
 
 - **前端**：使用 React 和 Vite 开发响应式用户界面，处理搜索输入、会话管理和结果显示。
 - **后端 (LLM Agent)**：基于 FastAPI 的 API 端点，集成 gemini-2.5-flash 模型和 langgraph 框架构建深度搜索工作流。![workflow](https://github.com/HydeYYHH/DeepSearch/blob/master/assets/agent_workflow.svg)
-- **搜索引擎**：采用基于网络爬虫的高度可定制化搜索引擎，使用 semchunk 对网页进行切块, 使用 Sentence Transformers 进行本地嵌入或 gemini-embedding 进行在线嵌入，通过 HNSWlib 进行语义搜索, 由此减小搜索结果token
-量并优化搜索质量。![architecture](https://github.com/HydeYYHH/DeepSearch/blob/master/assets/web_architecture.svg)
+- **搜索引擎**：采用基于网络爬虫的高度可定制化搜索引擎，使用 LlamaIndex 进行离线分块与向量检索；通过 SentenceSplitter 进行 512 token 分块并设置 128 token 重叠，使用 HuggingFace Embedding 进行本地嵌入，基于 VectorStoreIndex 完成相似度检索，从而减少搜索结果的 token 量并优化检索质量。![architecture](https://github.com/HydeYYHH/DeepSearch/blob/master/assets/web_architecture.svg)
 - **数据库**：通过 Peewee ORM 管理的 SQLite，用于存储会话和搜索历史。
 - **其他组件**：代理池用于网络抓取、速率限制器用于 API 调用。
 
@@ -47,7 +46,6 @@ DeepSearch 采用模块化架构，以实现高效的网络搜索和 LLM 驱动�
 5. 导入环境变量
     ```bash
     export GOOGLE_API_KEY=Your Google API Key
-    export USE_ONLINE_EMBEDDING=False # 如果想使用 gemini 在线嵌入设置为 True，否则使用从 huggingface 下载的本地嵌入预训练模型
     ```
 6. 运行应用
     ```bash
